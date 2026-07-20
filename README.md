@@ -1,7 +1,7 @@
 # JoSEFA
-## A Job Similarity Evaluator to Forecast several submitted HPC job's Activities
+## A Job Similarity Evaluator to Forecast submitted HPC job Activities
 
-JoSEFA is a ML workflow which perform a clustering on HPC jobs, and find similar jobs to 
+JoSEFA is a ML workflow which performs a clustering on HPC jobs, and finds similar jobs to 
 a new submitted job to compute some predictions.
 
 That repo has been made to run on the Fugaku dataset.
