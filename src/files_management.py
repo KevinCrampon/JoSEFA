@@ -1,5 +1,5 @@
-from datetime import datetime
 import os
+from datetime import datetime
 
 import pandas as pd  # type: ignore
 
@@ -36,12 +36,8 @@ def write_global_result_header(file_path: str) -> None:
                 "train_start_datetime,train_end_datetime,test_start_datetime,"
                 "test_end_datetime,"
                 "train_set_size,used_train_set_size,test_set_size,"
-                "r2_time_same_resources,mae_time_same_resources,"
-                "mse_time_same_resources,"
-                "acc_pclass_same_resources,f1_pclass_same_resources,"
-                "r2_time_all_similar,mae_time_all_similar,mse_time_all_similar,"
-                "acc_pclass_all_similar,f1_pclass_all_similar,"
-                "nb_not_predicted_same_resources,nb_not_predicted_all_similar,"
+                "r2_time,mae_time,mse_time,"
+                "acc_pclass,f1_pclass,"
                 "clustering_time,min_cluster_size\n"
             ]
         )
@@ -56,18 +52,12 @@ def write_global_result_line(
     nb_base_train_jobs: int,
     nb_actual_train_jobs: int,
     nb_test_jobs: int,
-    r2_time_same_resources: float | None,
-    mae_time_same_resources: float | None,
-    mse_time_same_resources: float | None,
-    acc_pclass_same_resources: float | None,
-    f1_pclass_same_resources: float | None,
-    r2_time_all_similar: float | None,
-    mae_time_all_similar: float | None,
-    mse_time_all_similar: float | None,
-    acc_pclass_all_similar: float | None,
-    f1_pclass_all_similar: float | None,
-    nb_not_predicted_same_resources: int,
-    nb_not_predicted_all_similar: int,
+    r2_time: float | None,
+    mae_time: float | None,
+    mse_time: float | None,
+    acc_pclass: float | None,
+    f1_pclass: float | None,
+    nb_not_predicted: int,
     clustering_time: str,
     min_cluster_size: int,
     date_format: str,
@@ -76,85 +66,34 @@ def write_global_result_line(
 
     Args:
         file_path (str): The file path
-        train_start_datetime (datetime): The start datetime for jobs in training set
-        train_end_datetime (datetime): The end datetime for jobs in training set
+        train_start_datetime (datetime): The start datetime for jobs in
+        training set
+        train_end_datetime (datetime): The end datetime for jobs in training
+        set
         test_start_datetime (datetime): The start datetime for jobs in test set
         test_end_datetime (datetime): The end datetime for jobs in test set
         nb_base_train_jobs (int): The number of jobs in the training set before
             subsampling
-        nb_actual_train_jobs (int): The number of jobs in the training set after
-            subsampling
+        nb_actual_train_jobs (int): The number of jobs in the training set
+            after subsampling
         nb_test_jobs (int): The number of jobs in the test set
-        r2_time_same_resources (float | None): The R^2 score for same resources
-            strategy, for duration prediction
-        mae_time_same_resources (float | None): The MAE score for same resources
-            strategy, for duration prediction
-        mse_time_same_resources (float | None): The MSE score for same resources
-            strategy, for duration prediction
-        acc_pclass_same_resources (float | None): The Accuracy score for same resources
-            strategy, for bound prediction
-        f1_pclass_same_resources (float | None): The F1 score for same resources
-            strategy, for bound prediction
-        r2_time_all_similar (float | None): The R^2 score for all similar jobs strategy,
-            for duration prediction
-        mae_time_all_similar (float | None): The MAE score for all similar jobs
-            strategy, for duration prediction
-        mse_time_all_similar (float | None): The MSE score for all similar jobs
-            strategy, for duration prediction
-        acc_pclass_all_similar (float | None): The Accuracy score for all similar jobs
-            strategy, for bound prediction
-        f1_pclass_all_similar (float | None): The F1 score for all similar jobs
-            strategy, for bound prediction
-        nb_not_predicted_same_resources (int): The number of jobs without prediction
-            for the same resources strategy
-        nb_not_predicted_all_similar (int): The number of jobs without prediction for
-            the all similar jobs strategy
+        r2_time (float | None): The R^2 score for duration prediction
+        mae_time (float | None): The MAE score for duration prediction
+        mse_time (float | None): The MSE score for duration prediction
+        acc_pclass (float | None): The Accuracy score for bound prediction
+        f1_pclass (float | None): The F1 score for bound prediction
+        nb_not_predicted (int): The number of jobs without prediction
         clustering_time (str): The clustering time
         min_cluster_size (int): The min_cluster_size parameter value
         date_format (str): The date format
     """
-    r2_time_same_resources_rounded = (
-        round(r2_time_same_resources, 2)
-        if r2_time_same_resources is not None
-        else "nan"
+    r2_time_rounded = round(r2_time, 2) if r2_time is not None else "nan"
+    mae_time_rounded = round(mae_time, 2) if mae_time is not None else "nan"
+    mse_time_rounded = round(mse_time, 2) if mse_time is not None else "nan"
+    acc_pclass_rounded = (
+        round(acc_pclass, 2) if acc_pclass is not None else "nan"
     )
-    mae_time_same_resources_rounded = (
-        round(mae_time_same_resources, 2)
-        if mae_time_same_resources is not None
-        else "nan"
-    )
-    mse_time_same_resources_rounded = (
-        round(mse_time_same_resources, 2)
-        if mse_time_same_resources is not None
-        else "nan"
-    )
-    acc_pclass_same_resources_rounded = (
-        round(acc_pclass_same_resources, 2)
-        if acc_pclass_same_resources is not None
-        else "nan"
-    )
-    f1_pclass_same_resources_rounded = (
-        round(f1_pclass_same_resources, 2)
-        if f1_pclass_same_resources is not None
-        else "nan"
-    )
-    r2_time_all_similar_rounded = (
-        round(r2_time_all_similar, 2) if r2_time_all_similar is not None else "nan"
-    )
-    mae_time_all_similar_rounded = (
-        round(mae_time_all_similar, 2) if mae_time_all_similar is not None else "nan"
-    )
-    mse_time_all_similar_rounded = (
-        round(mse_time_all_similar, 2) if mse_time_all_similar is not None else "nan"
-    )
-    acc_pclass_all_similar_rounded = (
-        round(acc_pclass_all_similar, 2)
-        if acc_pclass_all_similar is not None
-        else "nan"
-    )
-    f1_pclass_all_similar_rounded = (
-        round(f1_pclass_all_similar, 2) if f1_pclass_all_similar is not None else "nan"
-    )
+    f1_pclass_rounded = round(f1_pclass, 2) if f1_pclass is not None else "nan"
     with open(file_path, "a") as f:
         f.writelines(
             [
@@ -165,18 +104,12 @@ def write_global_result_line(
                 f"{nb_base_train_jobs},"
                 f"{nb_actual_train_jobs},"
                 f"{nb_test_jobs},"
-                f"{r2_time_same_resources_rounded},"
-                f"{mae_time_same_resources_rounded},"
-                f"{mse_time_same_resources_rounded},"
-                f"{acc_pclass_same_resources_rounded},"
-                f"{f1_pclass_same_resources_rounded},"
-                f"{r2_time_all_similar_rounded},"
-                f"{mae_time_all_similar_rounded},"
-                f"{mse_time_all_similar_rounded},"
-                f"{acc_pclass_all_similar_rounded},"
-                f"{f1_pclass_all_similar_rounded},"
-                f"{nb_not_predicted_same_resources},"
-                f"{nb_not_predicted_all_similar},"
+                f"{r2_time_rounded},"
+                f"{mae_time_rounded},"
+                f"{mse_time_rounded},"
+                f"{acc_pclass_rounded},"
+                f"{f1_pclass_rounded},"
+                f"{nb_not_predicted},"
                 f"{clustering_time}"
                 f"{min_cluster_size}\n"
             ]

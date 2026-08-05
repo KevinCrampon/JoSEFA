@@ -8,21 +8,25 @@ from typing import Any
 
 import numpy as np
 import pandas as pd  # type: ignore
-from clustering import get_dicts_pred, get_representative  # type: ignore
-from dataframe_tools import get_df_for_specific_time_range, load_df  # type: ignore
-from files_management import (  # type: ignore
+from hdbscan import HDBSCAN  # type: ignore
+from sklearn.decomposition import PCA  # type: ignore
+
+from src.clustering import get_dicts_pred, get_representative  # type: ignore
+from src.dataframe_tools import (  # type: ignore
+    get_df_for_specific_time_range,
+    load_df,
+)
+from src.files_management import (  # type: ignore
     create_dir,
     write_clustering_results,
-    write_result_header,
-    write_result_line,
+    write_global_result_header,
+    write_global_result_line,
 )
-from hdbscan import HDBSCAN  # type: ignore
-from metrics import (  # type: ignore
+from src.metrics import (  # type: ignore
     compute_metrics_classification,
     compute_metrics_regression,
 )
-from predict import manage_predict  # type: ignore
-from sklearn.decomposition import PCA  # type: ignore
+from src.predict import manage_predict  # type: ignore
 
 pd.set_option("future.no_silent_downcasting", True)
 
@@ -41,9 +45,17 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-retrain_each_days",
-        "r",
+        "-r",
         type=int,
-        help="Retrain each nb days, is also the number of days used to test the model",
+        help="Retrain each nb days, is also the number of days used to test "
+        "the model",
+    )
+    parser.add_argument(
+        "-strategy",
+        "-s",
+        type=str,
+        choices=["as", "sr", "su", "sur"],
+        help="The strategy used to perform prediction",
     )
 
     args = parser.parse_args()
@@ -51,7 +63,12 @@ if __name__ == "__main__":
     parquet_dir = args.parquet_dir
     nb_history_day = args.nb_history_day
     retrain_each_days = args.retrain_each_days
-    dir_path = create_dir("res_hdbscan_all_data_", retrain_each_days, nb_history_day)
+    strategy = args.strategy
+    dir_path = create_dir(
+        "res_hdbscan_all_data_",
+        retrain_each_days,
+        nb_history_day,
+    )
     file_path = f"{dir_path}/{year_month}.csv"
     year_month_dir = f"{dir_path}/{year_month}"
     if not os.path.isdir(year_month_dir):
@@ -60,7 +77,7 @@ if __name__ == "__main__":
     df_dir = f"{year_month_dir}/dfs"
     if not os.path.isdir(df_dir):
         os.mkdir(df_dir)
-    write_result_header(file_path=file_path)
+    write_global_result_header(file_path=file_path)
 
     offset = "+09:00"
     date_format = "%Y-%m-%d %H:%M:%S%z"
@@ -91,20 +108,13 @@ if __name__ == "__main__":
     )
     while train_start_datetime < until_date:
         i_split += 1
-        ground_truth_time: list[int] = []
+        ground_truth_time: list[float] = []
         predicted_time: list[float] = []
         ground_truth_pclass: list[float] = []
         predicted_pclass: list[float] = []
-        ground_truth_time_all_sim: list[int] = []
-        ground_truth_pclass_all_sim: list[float] = []
-        predicted_time_all_sim: list[float] = []
-        predicted_pclass_all_sim: list[float] = []
         list_jid: list[str] = []
         list_date_start: list[str] = []
         list_date_end: list[str] = []
-        list_jid_all_sim: list[str] = []
-        list_date_start_all_sim: list[str] = []
-        list_date_end_all_sim: list[str] = []
         train_end_datetime = train_start_datetime + timedelta(
             days=nb_history_day, seconds=-1
         )
@@ -170,7 +180,10 @@ if __name__ == "__main__":
                 leaf_size=100,
             )
 
-            X_reduced = PCA(n_components=50, random_state=42).fit_transform(embs_train)
+            X_reduced = PCA(
+                n_components=50,
+                random_state=42,
+            ).fit_transform(embs_train)
             clustering.fit(X_reduced)
             time_end_clustering = time()
             train_df["label"] = clustering.labels_
@@ -179,23 +192,23 @@ if __name__ == "__main__":
                 train_df, embs_train
             )
 
-            label_to_df_values_sr, label_to_df_values_as = get_dicts_pred(train_df)
+            dict_predictions = get_dicts_pred(train_df, strategy)
 
-            print(f"{datetime.now().strftime(date_format)} : Launch predictions...")
+            print(
+                f"{datetime.now().strftime(date_format)}",
+                " : Launch predictions...",
+            )
 
-            nb_not_predicted_sr = 0
-            nb_not_predicted_as = 0
-
+            nb_not_predicted = 0
             list_test_embs = embs_test.tolist()
 
             list_params: list[Any] = list()
-            # list_params = []
             results = []
             for row, emb in zip(test_df.iterrows(), list_test_embs):
                 results.append(
                     manage_predict(
-                        label_to_df_values_sr,
-                        label_to_df_values_as,
+                        dict_predictions,
+                        strategy,
                         list_rpr_labels,
                         list_rpr_embeddings,
                         row,
@@ -204,47 +217,37 @@ if __name__ == "__main__":
                     )
                 )
 
-            print(f"{datetime.now().strftime(date_format)} : Analyse predictions...")
+            print(
+                f"{datetime.now().strftime(date_format)} : "
+                "Analyse predictions..."
+            )
             for res in results:
-                res_sr, res_as = res
+                # res_sr, res_as, res_su, res_sur = res
                 if (
-                    res_sr is None
-                    or res_sr[0] is None
-                    or res_sr[1] is None
-                    or res_sr[2] is None
-                    or res_sr[3] is None
+                    res is None
+                    or res[0] is None
+                    or res[1] is None
+                    or res[2] is None
+                    or res[3] is None
                 ):
-                    nb_not_predicted_sr += 1
+                    nb_not_predicted += 1
                 else:
-                    ground_truth_time += [res_sr[0]]
-                    predicted_time += [res_sr[1]]
-                    ground_truth_pclass += [res_sr[2]]
-                    predicted_pclass += [res_sr[3]]
-                    list_jid += [res_sr[4]]
-                    list_date_start += [res_sr[5]]
-                    list_date_end += [res_sr[6]]
+                    ground_truth_time += [res[0]]
+                    predicted_time += [res[1]]
+                    ground_truth_pclass += [res[2]]
+                    predicted_pclass += [res[3]]
+                    list_jid += [res[4]]
+                    list_date_start += [res[5]]
+                    list_date_end += [res[6]]
 
-                if (
-                    res_as is None
-                    or res_as[0] is None
-                    or res_as[1] is None
-                    or res_as[2] is None
-                    or res_as[3] is None
-                ):
-                    nb_not_predicted_as += 1
-                else:
-                    ground_truth_time_all_sim += [res_as[0]]
-                    predicted_time_all_sim += [res_as[1]]
-                    ground_truth_pclass_all_sim += [res_as[2]]
-                    predicted_pclass_all_sim += [res_as[3]]
-                    list_jid_all_sim += [res_as[4]]
-                    list_date_start_all_sim += [res_as[5]]
-                    list_date_end_all_sim += [res_as[6]]
-
-            print(f"{datetime.now().strftime(date_format)} : Write predictions...")
+            print(
+                f"{datetime.now().strftime(date_format)} : "
+                "Write predictions..."
+            )
             # Bound
             write_clustering_results(
-                file_path=f"{df_dir}/df_pclass_sr_year-month-{year_month}_split-"
+                file_path=f"{df_dir}/"
+                f"df_pclass_year-month-{year_month}_split-"
                 f"{i_split}.csv",
                 pred=predicted_pclass,
                 gt=ground_truth_pclass,
@@ -252,19 +255,10 @@ if __name__ == "__main__":
                 list_date_start=list_date_start,
                 list_date_end=list_date_end,
             )
-            write_clustering_results(
-                file_path=f"{df_dir}/df_pclass_as_year-month-{year_month}_split-"
-                f"{i_split}.csv",
-                pred=predicted_pclass_all_sim,
-                gt=ground_truth_pclass_all_sim,
-                list_jid=list_jid_all_sim,
-                list_date_start=list_date_start_all_sim,
-                list_date_end=list_date_end_all_sim,
-            )
 
             # Time
             write_clustering_results(
-                file_path=f"{df_dir}/df_time_sr_year-month-{year_month}_split-"
+                file_path=f"{df_dir}/df_time_year-month-{year_month}_split-"
                 f"{i_split}.csv",
                 pred=predicted_time,
                 gt=ground_truth_time,
@@ -272,29 +266,13 @@ if __name__ == "__main__":
                 list_date_start=list_date_start,
                 list_date_end=list_date_end,
             )
-            write_clustering_results(
-                file_path=f"{df_dir}/df_time_as_year-month-{year_month}_split-"
-                f"{i_split}.csv",
-                pred=predicted_time_all_sim,
-                gt=ground_truth_time_all_sim,
-                list_jid=list_jid_all_sim,
-                list_date_start=list_date_start_all_sim,
-                list_date_end=list_date_end_all_sim,
-            )
 
             r2_time, mae_time, mse_time = compute_metrics_regression(
                 predicted_time, ground_truth_time
             )
-            r2_time_all_sim, mae_time_all_sim, mse_time_all_sim = (
-                compute_metrics_regression(
-                    predicted_time_all_sim, ground_truth_time_all_sim
-                )
-            )
+
             acc_pclass, f1_pclass = compute_metrics_classification(
                 predicted_pclass, ground_truth_pclass
-            )
-            acc_pclass_all_sim, f1_pclass_all_sim = compute_metrics_classification(
-                predicted_pclass_all_sim, ground_truth_pclass_all_sim
             )
 
         else:
@@ -305,15 +283,8 @@ if __name__ == "__main__":
             mse_time = None
             acc_pclass = None
             f1_pclass = None
-            r2_time_all_sim = None
-            mae_time_all_sim = None
-            mse_time_all_sim = None
-            acc_pclass_all_sim = None
-            f1_pclass_all_sim = None
-            nb_not_predicted_sr = 0
-            nb_not_predicted_as = 0
 
-        write_result_line(
+        write_global_result_line(
             file_path=file_path,
             train_start_datetime=train_start_datetime,
             train_end_datetime=train_end_datetime,
@@ -322,22 +293,18 @@ if __name__ == "__main__":
             nb_base_train_jobs=nb_base_train_jobs,
             nb_actual_train_jobs=train_df.shape[0],
             nb_test_jobs=test_df.shape[0],
-            r2_time_same_resources=r2_time,
-            mae_time_same_resources=mae_time,
-            mse_time_same_resources=mse_time,
-            acc_pclass_same_resources=acc_pclass,
-            f1_pclass_same_resources=f1_pclass,
-            r2_time_all_similar=r2_time_all_sim,
-            mae_time_all_similar=mae_time_all_sim,
-            mse_time_all_similar=mse_time_all_sim,
-            acc_pclass_all_similar=acc_pclass_all_sim,
-            f1_pclass_all_similar=f1_pclass_all_sim,
-            nb_not_predicted_same_resources=nb_not_predicted_sr,
-            nb_not_predicted_all_similar=nb_not_predicted_as,
+            r2_time=r2_time,
+            mae_time=mae_time,
+            mse_time=mse_time,
+            acc_pclass=acc_pclass,
+            f1_pclass=f1_pclass,
+            nb_not_predicted=nb_not_predicted,
             clustering_time=f"{time_end_clustering-time_start_clustering:.2f}",
             min_cluster_size=min_cluster_size,
             date_format=date_format,
         )
 
-        train_start_datetime = train_start_datetime + timedelta(days=nb_history_day)
+        train_start_datetime = train_start_datetime + timedelta(
+            days=nb_history_day
+        )
     print("Finished")

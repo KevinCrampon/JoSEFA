@@ -4,8 +4,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd  # type: ignore
-from constants import LIST_MONTH
 from sklearn.preprocessing import normalize  # type: ignore
+
+from src.constants import LIST_MONTH
 
 
 def load_df(parquet_dir: str, month_year: str) -> pd.DataFrame:
@@ -16,8 +17,8 @@ def load_df(parquet_dir: str, month_year: str) -> pd.DataFrame:
         month_year (str): The parquet name format YY_MM
 
     Returns:
-        pd.DataFrame: A dataframe containing the month_year parquet and also the
-        month before and after
+        pd.DataFrame: A dataframe containing the month_year parquet and also
+            the month before and after
     """
     index = LIST_MONTH.index(month_year)
     used_months_year = [month_year]
@@ -26,7 +27,9 @@ def load_df(parquet_dir: str, month_year: str) -> pd.DataFrame:
     if index < len(LIST_MONTH) - 1:
         used_months_year += [LIST_MONTH[index + 1]]
     list_df = []
-    list_paths = [os.path.join(parquet_dir, f"{my}.parquet") for my in used_months_year]
+    list_paths = [
+        os.path.join(parquet_dir, f"{my}.parquet") for my in used_months_year
+    ]
     print("Files to load : ", list_paths)
     for p_file in list_paths:
         p_file = str(Path(p_file).resolve())
@@ -75,7 +78,8 @@ def get_df_for_specific_time_range(
     date_time_end_test: datetime,
     max_nb_jobs: int | None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray, np.ndarray, int]:
-    """Returns a sub dfs of df_jobs, with only jobs run between the provided time ranges
+    """Returns a sub dfs of df_jobs, with only jobs run between the provided
+    time ranges
 
     Args:
         df_jobs (pd.DataFrame): The base jobs Dataframe
@@ -83,8 +87,9 @@ def get_df_for_specific_time_range(
         date_time_end_train (datetime): End datetime for train set
         date_time_start_test (datetime): Start datetime for test set
         date_time_end_test (datetime): End datetime for test set
-        max_nb_jobs (int | None): If not None, if the number of jobs in the train set is
-        > max_nb_jobs then only max_nb_jobs are randomly selected
+            max_nb_jobs (int | None): If not None, if the number of jobs
+            in the train set is > max_nb_jobs then only max_nb_jobs are
+            randomly selected
 
     Returns:
         tuple[pd.DataFrame,pd.DataFrame, np.ndarray, np.ndarray, int]: Returns:

@@ -1,4 +1,3 @@
-import numpy as np
 from sklearn.metrics import (  # type: ignore
     accuracy_score,
     f1_score,
@@ -9,13 +8,13 @@ from sklearn.metrics import (  # type: ignore
 
 
 def compute_metrics_regression(
-    pred: np.ndarray, gt: np.ndarray
+    pred: list[float], gt: list[float]
 ) -> tuple[float | None, float | None, float | None]:
     """Computes the regression performance metrics
 
     Args:
-        pred (np.ndarray): The prediction vector
-        gt (np.ndarray): The ground truth vector
+        pred (list[float]): The prediction vector
+        gt (list[float]): The ground truth vector
 
     Returns:
         tuple[float | None, float | None, float | None]: R^2, MAE, MSE
@@ -27,13 +26,13 @@ def compute_metrics_regression(
 
 
 def compute_metrics_classification(
-    pred: np.ndarray, gt: np.ndarray
+    pred: list[float], gt: list[float]
 ) -> tuple[float | None, float | None]:
     """Computes the classification performance metrics
 
     Args:
-        pred (np.ndarray): The prediction vector
-        gt (np.ndarray): The ground truth vector
+        pred (list[float]): The prediction vector
+        gt (list[float]): The ground truth vector
 
     Returns:
         tuple[float | None, float | None]: Accuracy, F1

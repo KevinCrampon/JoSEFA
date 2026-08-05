@@ -14,10 +14,11 @@ def get_close_label(
     """Returns the label of the closest cluster if close enough (<= eps)
 
     Args:
-        list_rpr_labels (np.ndarray): The labels associated to each representative
-        vector
+        list_rpr_labels (np.ndarray): The labels associated to each
+        representative vector
         list_rpr_embeddings (np.ndarray): The representative embedding vector
-        emb (np.ndarray): The embedding for which we are looking for close cluster
+        emb (np.ndarray): The embedding for which we are looking for close
+        cluster
         eps (float): _description_
 
     Returns:
@@ -34,131 +35,139 @@ def get_close_label(
 
 
 def predicts(
-    label_to_df_values_sr: dict[int, Any],
-    label_to_df_values_as: dict[int, Any],
+    label_to_df_values: dict[int, Any],
+    strategy: str,
     list_rpr_labels: np.ndarray,
     list_rpr_embeddings: np.ndarray,
     row: pd.Series,
     emb: np.ndarray,
     eps: float,
-) -> tuple[tuple[Any, Any, Any, Any] | None, tuple[Any, Any, Any, Any] | None]:
+) -> tuple[Any, Any, Any, Any] | None:
     """Makes prediction for a given job (row, emb)
 
     Args:
-        label_to_df_values_sr (dict[int, Any]): The same resources jobs dictionary
-        label_to_df_values_as (dict[int, Any]): The all similar jobs dictionary
-        list_rpr_labels (np.ndarray): The labels associated to each representative
+        label_to_df_values (dict[int, Any]): The label dictionary according
+            the strategy
+        strategy (str): The selected strategy
+        list_rpr_labels (np.ndarray): The labels associated to each
+        representative
         vector
         list_rpr_embeddings (np.ndarray): The representative embedding vector
         row (pd.Series): A jobs DataFrame row
         emb (np.ndarray): The embedding corresponding the the job row
-        eps (float): The eps value to consider the job close enough of a cluster
+        eps (float): The eps value to consider the job close enough of a
+        cluster
 
     Returns:
-        tuple[tuple[Any, Any, Any, Any] | None, tuple[Any, Any, Any, Any] | None]:
-        (
+        tuple[tuple[Any, Any, Any, Any] | None:
         (predicted runtime, target runtime, predicted pclass, target pclass)
-            // for same resources jobs
-        (predicted runtime, target runtime, predicted pclass, target pclass)
-            // for all similar jobs
-        )
     """
-    output_as = None
-    output_sr = None
+    if strategy not in ["as", "su", "sr", "sur"]:
+        raise KeyError(
+            "Unknown Strategy: availables ones are 'as', 'sr', 'su', and 'sur'"
+        )
     label = get_close_label(list_rpr_labels, list_rpr_embeddings, emb, eps)
     if label is not None:
-        output_as = (
-            label_to_df_values_as[label][0],
-            row[1]["duration"],
-            label_to_df_values_as[label][1],
-            row[1]["pclass"],
-        )
-        test_cnumr = row[1]["cnumr"]
-        test_nnumr = row[1]["nnumr"]
-        if (
-            test_nnumr in label_to_df_values_sr[label].keys()
-            and test_cnumr in label_to_df_values_sr[label][test_nnumr].keys()
-        ):
-            output_sr = (
-                label_to_df_values_sr[label][test_nnumr][test_cnumr][0],
+        if strategy == "as":
+            return (
+                label_to_df_values[label][0],
                 row[1]["duration"],
-                label_to_df_values_sr[label][test_nnumr][test_cnumr][1],
+                label_to_df_values[label][1],
                 row[1]["pclass"],
             )
-    return output_sr, output_as
+        test_cnumr = row[1]["cnumr"]
+        test_nnumr = row[1]["nnumr"]
+        test_usr = row[1]["usr"]
+        if strategy == "sr":
+            if (
+                test_nnumr in label_to_df_values[label].keys()
+                and test_cnumr in label_to_df_values[label][test_nnumr].keys()
+            ):
+                return (
+                    label_to_df_values[label][test_nnumr][test_cnumr][0],
+                    row[1]["duration"],
+                    label_to_df_values[label][test_nnumr][test_cnumr][1],
+                    row[1]["pclass"],
+                )
+        if strategy == "su":
+            if test_usr in label_to_df_values[label].keys():
+                return (
+                    label_to_df_values[label][test_usr][0],
+                    row[1]["duration"],
+                    label_to_df_values[label][test_usr][1],
+                    row[1]["pclass"],
+                )
+        if strategy == "sur":
+            if (
+                test_nnumr in label_to_df_values[label].keys()
+                and test_cnumr in label_to_df_values[label][test_nnumr].keys()
+                and test_usr
+                in label_to_df_values[label][test_nnumr][test_cnumr].keys()
+            ):
+                return (
+                    label_to_df_values[label][test_nnumr][test_cnumr][
+                        test_usr
+                    ][0],
+                    row[1]["duration"],
+                    label_to_df_values[label][test_nnumr][test_cnumr][
+                        test_usr
+                    ][1],
+                    row[1]["pclass"],
+                )
+    return None
 
 
 def manage_predict(
-    label_to_df_values_sr: dict[int, Any],
-    label_to_df_values_as: dict[int, Any],
+    label_to_df_values: dict[int, Any],
+    strategy: str,
     list_rpr_labels: np.ndarray,
     list_rpr_embeddings: np.ndarray,
     row: pd.Series,
     emb: np.ndarray,
     eps_euclidean: float,
-) -> tuple[
-    tuple[Any | None, Any | None, Any | None, Any | None, Any, Any, Any] | None,
-    tuple[Any | None, Any | None, Any | None, Any | None, Any, Any, Any] | None,
-]:
-    """Launches a prediction for a given job (row, emb), collects the results and
-    returns them
+) -> (
+    tuple[Any | None, Any | None, Any | None, Any | None, Any, Any, Any] | None
+):
+    """Launches a prediction for a given job (row, emb), collects the results
+    and returns them
 
     Args:
-        label_to_df_values_sr (dict[int, Any]): The same resources jobs dictionary
-        label_to_df_values_as (dict[int, Any]): The all similar jobs dictionary
-        list_rpr_labels (np.ndarray): The labels associated to each representative
-        vector
+        label_to_df_values (dict[int, Any]): The label dictionary according
+            the strategy
+        strategy (str): The selected strategy
+        list_rpr_labels (np.ndarray): The labels associated to each
+        representative vector
         list_rpr_embeddings (np.ndarray): The representative embedding vector
         row (pd.Series): A jobs DataFrame row
         emb (np.ndarray): The embedding corresponding the the job row
-        eps_euclidean (float): The eps value to consider the job close enough of a
-            cluster
+        eps_euclidean (float): The eps value to consider the job close enough
+        of a cluster
 
     Returns:
-        tuple[ tuple[Any | None, Any | None, Any | None, Any | None, Any, Any, Any]
-            | None,
-        tuple[Any | None, Any | None, Any | None, Any | None, Any, Any, Any] | None, ]:
-        (
-        (predicted runtime, target runtime, predicted pclass, target pclass, job id,
-            job start datetime, job end datetime)
-            // for same resources jobs
-        (predicted runtime, target runtime, predicted pclass, target pclass, job id,
-            job start datetime, job end datetime)
-            // for all similar jobs
-        )
+        tuple[Any | None, Any | None, Any | None, Any | None, Any, Any,
+        Any] | None:
+        (predicted runtime, target runtime, predicted pclass, target pclass,
+        job id, job start datetime, job end datetime)
+
     """
-    out_sr, out_as = predicts(
-        label_to_df_values_sr,
-        label_to_df_values_as,
+    out = predicts(
+        label_to_df_values,
+        strategy,
         list_rpr_labels,
         list_rpr_embeddings,
         row,
         emb,
         eps=eps_euclidean,
     )
-    if out_sr is None:
+
+    if out is None:
         pred_time, gt_time, pred_pclass, gt_pclass = None, None, None, None
     else:
-        pred_time, gt_time, pred_pclass, gt_pclass = out_sr
-    if out_as is None:
-        (
-            pred_time_all_sim,
-            gt_time_all_sim,
-            pred_pclass_all_sim,
-            gt_pclass_all_sim,
-        ) = (None, None, None, None)
-    else:
-        (
-            pred_time_all_sim,
-            gt_time_all_sim,
-            pred_pclass_all_sim,
-            gt_pclass_all_sim,
-        ) = out_as
+        pred_time, gt_time, pred_pclass, gt_pclass = out
 
-    output_sr = None
-    output_as = None
+    output = None
     if gt_time is not None:
-        output_sr = (
+        output = (
             gt_time,
             pred_time,
             gt_pclass,
@@ -167,14 +176,4 @@ def manage_predict(
             row[1]["date_start"],
             row[1]["date_end"],
         )
-    if gt_time_all_sim is not None:
-        output_as = (
-            gt_time_all_sim,
-            pred_time_all_sim,
-            gt_pclass_all_sim,
-            pred_pclass_all_sim,
-            row[1]["jid"],
-            row[1]["date_start"],
-            row[1]["date_end"],
-        )
-    return output_sr, output_as
+    return output
