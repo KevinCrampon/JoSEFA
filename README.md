@@ -48,7 +48,7 @@ options:
 
 **Example**
 ```bash
-python josefa.py -parquet_dir PARQUET_DIR_PATH -year_month 2023-01 --nb_history_day 30 -retrain_each_days 1 -s as
+python josefa.py -parquet_dir PARQUET_DIR_PATH -year_month 2023-01 -nb_history_days 30 -retrain_each_days 1 -s as
 ```
 
 ## Contribution
