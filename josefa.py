@@ -61,11 +61,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     year_month = args.year_month
     parquet_dir = args.parquet_dir
-    nb_history_day = args.nb_history_day
+    nb_history_day = args.nb_history_days
     retrain_each_days = args.retrain_each_days
     strategy = args.strategy
     dir_path = create_dir(
-        "res_hdbscan_all_data_",
+        f"res_{strategy}_hdbscan_all_data_",
         retrain_each_days,
         nb_history_day,
     )
@@ -175,9 +175,6 @@ if __name__ == "__main__":
             clustering = HDBSCAN(
                 min_cluster_size=min_cluster_size,
                 metric="euclidean",
-                algorithm="boruvka_balltree",
-                core_dist_n_jobs=-1,
-                leaf_size=100,
             )
 
             X_reduced = PCA(
@@ -305,6 +302,6 @@ if __name__ == "__main__":
         )
 
         train_start_datetime = train_start_datetime + timedelta(
-            days=nb_history_day
+            days=retrain_each_days
         )
     print("Finished")

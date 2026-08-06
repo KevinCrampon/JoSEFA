@@ -37,7 +37,7 @@ def write_global_result_header(file_path: str) -> None:
                 "test_end_datetime,"
                 "train_set_size,used_train_set_size,test_set_size,"
                 "r2_time,mae_time,mse_time,"
-                "acc_pclass,f1_pclass,"
+                "acc_pclass,f1_pclass,nb_not_predicted,"
                 "clustering_time,min_cluster_size\n"
             ]
         )
@@ -110,7 +110,7 @@ def write_global_result_line(
                 f"{acc_pclass_rounded},"
                 f"{f1_pclass_rounded},"
                 f"{nb_not_predicted},"
-                f"{clustering_time}"
+                f"{clustering_time},"
                 f"{min_cluster_size}\n"
             ]
         )

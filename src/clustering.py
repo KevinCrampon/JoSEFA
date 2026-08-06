@@ -160,7 +160,7 @@ def get_dicts_pred(
     if strategy == "su":
         return get_dict_preds_su(label_to_df)
     if strategy == "sur":
-        get_dict_preds_sur(label_to_df)
+        return get_dict_preds_sur(label_to_df)
     raise KeyError(
         "Unknown Strategy: available ones are 'as', 'sr', 'su', and 'sur'"
     )
