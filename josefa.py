@@ -108,6 +108,8 @@ if __name__ == "__main__":
     )
     while train_start_datetime < until_date:
         i_split += 1
+        train_ok = False
+        test_ok = False
         ground_truth_time: list[float] = []
         predicted_time: list[float] = []
         ground_truth_pclass: list[float] = []
@@ -152,8 +154,9 @@ if __name__ == "__main__":
             )
         )
 
-        if train_df.shape[0] > 0 and test_df.shape[0] > 0:
-            min_cluster_size = 200
+        min_cluster_size = 200
+        if train_df.shape[0] > 0:
+            train_ok = True
 
             print(
                 f"{datetime.now().strftime(date_format)} : "
@@ -185,101 +188,109 @@ if __name__ == "__main__":
             time_end_clustering = time()
             train_df["label"] = clustering.labels_
 
-            list_rpr_labels, list_rpr_embeddings = get_representative(
-                train_df, embs_train
-            )
+            if test_df.shape[0] > 0:
+                test_ok = True
 
-            dict_predictions = get_dicts_pred(train_df, strategy)
-
-            print(
-                f"{datetime.now().strftime(date_format)}",
-                " : Launch predictions...",
-            )
-
-            nb_not_predicted = 0
-            list_test_embs = embs_test.tolist()
-
-            list_params: list[Any] = list()
-            results = []
-            for row, emb in zip(test_df.iterrows(), list_test_embs):
-                results.append(
-                    manage_predict(
-                        dict_predictions,
-                        strategy,
-                        list_rpr_labels,
-                        list_rpr_embeddings,
-                        row,
-                        emb,
-                        eps_euclidean,
-                    )
+                list_rpr_labels, list_rpr_embeddings = get_representative(
+                    train_df, embs_train
                 )
 
-            print(
-                f"{datetime.now().strftime(date_format)} : "
-                "Analyse predictions..."
-            )
-            for res in results:
-                # res_sr, res_as, res_su, res_sur = res
-                if (
-                    res is None
-                    or res[0] is None
-                    or res[1] is None
-                    or res[2] is None
-                    or res[3] is None
-                ):
-                    nb_not_predicted += 1
-                else:
-                    ground_truth_time += [res[0]]
-                    predicted_time += [res[1]]
-                    ground_truth_pclass += [res[2]]
-                    predicted_pclass += [res[3]]
-                    list_jid += [res[4]]
-                    list_date_start += [res[5]]
-                    list_date_end += [res[6]]
+                dict_predictions = get_dicts_pred(train_df, strategy)
 
-            print(
-                f"{datetime.now().strftime(date_format)} : "
-                "Write predictions..."
-            )
-            # Bound
-            write_clustering_results(
-                file_path=f"{df_dir}/"
-                f"df_pclass_year-month-{year_month}_split-"
-                f"{i_split}.csv",
-                pred=predicted_pclass,
-                gt=ground_truth_pclass,
-                list_jid=list_jid,
-                list_date_start=list_date_start,
-                list_date_end=list_date_end,
-            )
+                print(
+                    f"{datetime.now().strftime(date_format)}",
+                    " : Launch predictions...",
+                )
 
-            # Time
-            write_clustering_results(
-                file_path=f"{df_dir}/df_time_year-month-{year_month}_split-"
-                f"{i_split}.csv",
-                pred=predicted_time,
-                gt=ground_truth_time,
-                list_jid=list_jid,
-                list_date_start=list_date_start,
-                list_date_end=list_date_end,
-            )
+                nb_not_predicted: int | None = 0
+                # for MyPy checking
+                assert nb_not_predicted is not None
+                list_test_embs = embs_test.tolist()
 
-            r2_time, mae_time, mse_time = compute_metrics_regression(
-                predicted_time, ground_truth_time
-            )
+                list_params: list[Any] = list()
+                results = []
+                for row, emb in zip(test_df.iterrows(), list_test_embs):
+                    results.append(
+                        manage_predict(
+                            dict_predictions,
+                            strategy,
+                            list_rpr_labels,
+                            list_rpr_embeddings,
+                            row,
+                            emb,
+                            eps_euclidean,
+                        )
+                    )
 
-            acc_pclass, f1_pclass = compute_metrics_classification(
-                predicted_pclass, ground_truth_pclass
-            )
+                print(
+                    f"{datetime.now().strftime(date_format)} : "
+                    "Analyse predictions..."
+                )
+                for res in results:
+                    # res_sr, res_as, res_su, res_sur = res
+                    if (
+                        res is None
+                        or res[0] is None
+                        or res[1] is None
+                        or res[2] is None
+                        or res[3] is None
+                    ):
+                        nb_not_predicted += 1
+                    else:
+                        ground_truth_time += [res[0]]
+                        predicted_time += [res[1]]
+                        ground_truth_pclass += [res[2]]
+                        predicted_pclass += [res[3]]
+                        list_jid += [res[4]]
+                        list_date_start += [res[5]]
+                        list_date_end += [res[6]]
 
-        else:
+                print(
+                    f"{datetime.now().strftime(date_format)} : "
+                    "Write predictions..."
+                )
+                # Bound
+                write_clustering_results(
+                    file_path=f"{df_dir}/"
+                    f"df_pclass_year-month-{year_month}_split-"
+                    f"{i_split}.csv",
+                    pred=predicted_pclass,
+                    gt=ground_truth_pclass,
+                    list_jid=list_jid,
+                    list_date_start=list_date_start,
+                    list_date_end=list_date_end,
+                )
+
+                # Time
+                write_clustering_results(
+                    file_path=f"{df_dir}/df_time_year-month-{year_month}_"
+                    f"split-{i_split}.csv",
+                    pred=predicted_time,
+                    gt=ground_truth_time,
+                    list_jid=list_jid,
+                    list_date_start=list_date_start,
+                    list_date_end=list_date_end,
+                )
+
+                r2_time, mae_time, mse_time = compute_metrics_regression(
+                    predicted_time, ground_truth_time
+                )
+
+                acc_pclass, f1_pclass = compute_metrics_classification(
+                    predicted_pclass, ground_truth_pclass
+                )
+
+        if not train_ok:
             time_start_clustering = 0
             time_end_clustering = 0
+            nb_base_train_jobs = 0
+        if not train_ok or not test_ok:
             r2_time = None
             mae_time = None
             mse_time = None
             acc_pclass = None
             f1_pclass = None
+            nb_not_predicted = None
 
         write_global_result_line(
             file_path=file_path,

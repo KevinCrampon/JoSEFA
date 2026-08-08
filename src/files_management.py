@@ -57,7 +57,7 @@ def write_global_result_line(
     mse_time: float | None,
     acc_pclass: float | None,
     f1_pclass: float | None,
-    nb_not_predicted: int,
+    nb_not_predicted: int | None,
     clustering_time: str,
     min_cluster_size: int,
     date_format: str,
@@ -82,7 +82,7 @@ def write_global_result_line(
         mse_time (float | None): The MSE score for duration prediction
         acc_pclass (float | None): The Accuracy score for bound prediction
         f1_pclass (float | None): The F1 score for bound prediction
-        nb_not_predicted (int): The number of jobs without prediction
+        nb_not_predicted (int | None): The number of jobs without prediction
         clustering_time (str): The clustering time
         min_cluster_size (int): The min_cluster_size parameter value
         date_format (str): The date format
@@ -94,6 +94,9 @@ def write_global_result_line(
         round(acc_pclass, 2) if acc_pclass is not None else "nan"
     )
     f1_pclass_rounded = round(f1_pclass, 2) if f1_pclass is not None else "nan"
+    nb_not_predicted_checked = (
+        nb_not_predicted if nb_not_predicted is not None else "nan"
+    )
     with open(file_path, "a") as f:
         f.writelines(
             [
@@ -109,7 +112,7 @@ def write_global_result_line(
                 f"{mse_time_rounded},"
                 f"{acc_pclass_rounded},"
                 f"{f1_pclass_rounded},"
-                f"{nb_not_predicted},"
+                f"{nb_not_predicted_checked},"
                 f"{clustering_time},"
                 f"{min_cluster_size}\n"
             ]
