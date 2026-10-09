@@ -24,6 +24,7 @@ from src.files_management import (  # type: ignore
 )
 from src.metrics import (  # type: ignore
     compute_metrics_classification,
+    compute_metrics_clustering,
     compute_metrics_regression,
 )
 from src.predict import manage_predict  # type: ignore
@@ -171,7 +172,6 @@ if __name__ == "__main__":
                 f"Min Cluster Size: {min_cluster_size}"
             )
 
-            time_start_clustering = time()
             eps_cosine = 0.1
             eps_euclidean = np.sqrt(2 * (1 - eps_cosine))
 
@@ -179,14 +179,25 @@ if __name__ == "__main__":
                 min_cluster_size=min_cluster_size,
                 metric="euclidean",
             )
-
-            X_reduced = PCA(
+            pca = PCA(
                 n_components=50,
                 random_state=42,
-            ).fit_transform(embs_train)
+            )
+
+            time_start_pca = time()
+            X_reduced = pca.fit_transform(embs_train)
+            time_end_pca = time()
+            time_start_clustering = time()
             clustering.fit(X_reduced)
             time_end_clustering = time()
             train_df["label"] = clustering.labels_
+
+            dict_clustering_metrics = compute_metrics_clustering(
+                embs_train, clustering.labels_, clustering
+            )
+            dict_clustering_metrics_reduced = compute_metrics_clustering(
+                X_reduced, clustering.labels_, clustering
+            )
 
             if test_df.shape[0] > 0:
                 test_ok = True
@@ -281,6 +292,8 @@ if __name__ == "__main__":
                 )
 
         if not train_ok:
+            time_start_pca = 0
+            time_end_pca = 0
             time_start_clustering = 0
             time_end_clustering = 0
             nb_base_train_jobs = 0
@@ -307,6 +320,27 @@ if __name__ == "__main__":
             acc_pclass=acc_pclass,
             f1_pclass=f1_pclass,
             nb_not_predicted=nb_not_predicted,
+            n_clusters=dict_clustering_metrics["n_clusters"],
+            noise_ratio=dict_clustering_metrics["noise_ratio"],
+            silhouette=dict_clustering_metrics["silhouette"],
+            calinski_harabasz=dict_clustering_metrics["calinski_harabasz"],
+            davies_bouldin=dict_clustering_metrics["davies_bouldin"],
+            dbcv=None,  # Extracted from model trained on reduced data
+            # Extracted from model trained on reduced data
+            cluster_persistence=None,
+            reduced_noise_ratio=dict_clustering_metrics_reduced["noise_ratio"],
+            reduced_silhouette=dict_clustering_metrics_reduced["silhouette"],
+            reduced_calinski_harabasz=dict_clustering_metrics_reduced[
+                "calinski_harabasz"
+            ],
+            reduced_davies_bouldin=dict_clustering_metrics_reduced[
+                "davies_bouldin"
+            ],
+            reduced_dbcv=dict_clustering_metrics_reduced["dbcv"],
+            reduced_cluster_persistence=dict_clustering_metrics_reduced[
+                "cluster_persistence"
+            ],
+            pca_time=f"{time_end_pca-time_start_pca:.2f}",
             clustering_time=f"{time_end_clustering-time_start_clustering:.2f}",
             min_cluster_size=min_cluster_size,
             date_format=date_format,
@@ -315,4 +349,5 @@ if __name__ == "__main__":
         train_start_datetime = train_start_datetime + timedelta(
             days=retrain_each_days
         )
+
     print("Finished")

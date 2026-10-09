@@ -38,7 +38,12 @@ def write_global_result_header(file_path: str) -> None:
                 "train_set_size,used_train_set_size,test_set_size,"
                 "r2_time,mae_time,mse_time,"
                 "acc_pclass,f1_pclass,nb_not_predicted,"
-                "clustering_time,min_cluster_size\n"
+                "n_clusters,noise_ratio,silhouette,calinski_harabasz,"
+                "davies_bouldin,dbcv,cluster_persistence,"
+                "reduced_noise_ratio,reduced_silhouette,"
+                "reduced_calinski_harabasz,reduced_davies_bouldin,"
+                "reduced_dbcv,reduced_cluster_persistence,"
+                "pca_time,clustering_time,min_cluster_size\n"
             ]
         )
 
@@ -58,6 +63,20 @@ def write_global_result_line(
     acc_pclass: float | None,
     f1_pclass: float | None,
     nb_not_predicted: int | None,
+    n_clusters: int | None,
+    noise_ratio: float | None,
+    silhouette: float | None,
+    calinski_harabasz: float | None,
+    davies_bouldin: float | None,
+    dbcv: float | None,
+    cluster_persistence: float | None,
+    reduced_noise_ratio: float | None,
+    reduced_silhouette: float | None,
+    reduced_calinski_harabasz: float | None,
+    reduced_davies_bouldin: float | None,
+    reduced_dbcv: float | None,
+    reduced_cluster_persistence: float | None,
+    pca_time: str,
     clustering_time: str,
     min_cluster_size: int,
     date_format: str,
@@ -83,6 +102,27 @@ def write_global_result_line(
         acc_pclass (float | None): The Accuracy score for bound prediction
         f1_pclass (float | None): The F1 score for bound prediction
         nb_not_predicted (int | None): The number of jobs without prediction
+        n_clusters (int | None): The number of clusters found
+        noise_ratio (float | None): Noise ratio computed on embeddings
+        silhouette (float | None): Silhouette score computed on embeddings
+        calinski_harabasz (float | None): Calinski Harabasz computed
+            on embeddings
+        davies_bouldin (float | None): Davies Bouldin computed on embeddings
+        dbcv (float | None): DBCV computed on embeddings
+        cluster_persistence (float | None): Cluster Persistence
+            computed on embeddings
+        reduced_noise_ratio (float | None): Noise ratio computed on
+            reduced embeddings
+        reduced_silhouette (float | None): Silhouette score computed on
+            reduced embeddings
+        reduced_calinski_harabasz (float | None): Calinski Harabasz computed
+            on reduced embeddings
+        reduced_davies_bouldin (float | None): Davies Bouldin computed on
+            reduced embeddings
+        reduced_dbcv (float | None): DBCV computed on reduced embeddings
+        reduced_cluster_persistence (float | None): Cluster Persistence
+            computed on reduced embeddings
+        pca_time (str): The PCA time
         clustering_time (str): The clustering time
         min_cluster_size (int): The min_cluster_size parameter value
         date_format (str): The date format
@@ -96,6 +136,54 @@ def write_global_result_line(
     f1_pclass_rounded = round(f1_pclass, 2) if f1_pclass is not None else "nan"
     nb_not_predicted_checked = (
         nb_not_predicted if nb_not_predicted is not None else "nan"
+    )
+
+    n_clusters_rounded = n_clusters if n_clusters is not None else "nan"
+    noise_ratio_rounded = (
+        round(noise_ratio, 2) if noise_ratio is not None else "nan"
+    )
+    silhouette_rounded = (
+        round(silhouette, 2) if silhouette is not None else "nan"
+    )
+    calinski_harabasz_rounded = (
+        round(calinski_harabasz, 2) if calinski_harabasz is not None else "nan"
+    )
+    davies_bouldin_rounded = (
+        round(davies_bouldin, 2) if davies_bouldin is not None else "nan"
+    )
+    dbcv_rounded = round(dbcv, 2) if dbcv is not None else "nan"
+    cluster_persistence_rounded = (
+        round(cluster_persistence, 2)
+        if cluster_persistence is not None
+        else "nan"
+    )
+    reduced_noise_ratio_rounded = (
+        round(reduced_noise_ratio, 2)
+        if reduced_noise_ratio is not None
+        else "nan"
+    )
+    reduced_silhouette_rounded = (
+        round(reduced_silhouette, 2)
+        if reduced_silhouette is not None
+        else "nan"
+    )
+    reduced_calinski_harabasz_rounded = (
+        round(reduced_calinski_harabasz, 2)
+        if reduced_calinski_harabasz is not None
+        else "nan"
+    )
+    reduced_davies_bouldin_rounded = (
+        round(reduced_davies_bouldin, 2)
+        if reduced_davies_bouldin is not None
+        else "nan"
+    )
+    reduced_dbcv_rounded = (
+        round(reduced_dbcv, 2) if reduced_dbcv is not None else "nan"
+    )
+    reduced_cluster_persistence_rounded = (
+        round(reduced_cluster_persistence, 2)
+        if reduced_cluster_persistence is not None
+        else "nan"
     )
     with open(file_path, "a") as f:
         f.writelines(
@@ -113,6 +201,20 @@ def write_global_result_line(
                 f"{acc_pclass_rounded},"
                 f"{f1_pclass_rounded},"
                 f"{nb_not_predicted_checked},"
+                f"{n_clusters_rounded},"
+                f"{noise_ratio_rounded},"
+                f"{silhouette_rounded},"
+                f"{calinski_harabasz_rounded},"
+                f"{davies_bouldin_rounded},"
+                f"{dbcv_rounded},"
+                f"{cluster_persistence_rounded},"
+                f"{reduced_noise_ratio_rounded},"
+                f"{reduced_silhouette_rounded},"
+                f"{reduced_calinski_harabasz_rounded},"
+                f"{reduced_davies_bouldin_rounded},"
+                f"{reduced_dbcv_rounded},"
+                f"{reduced_cluster_persistence_rounded},"
+                f"{pca_time},"
                 f"{clustering_time},"
                 f"{min_cluster_size}\n"
             ]
